@@ -31,7 +31,7 @@ def kNN(k, Lnorm, Xtrain, Xtest, Ctrain):
 #######################################################################################
 ################################ Decision Tree ########################################
 #######################################################################################
-def GetProb(C):
+def GetPrior(C):
     # Prior a sample of belonging to class C
     Cm = []
     pm = []
@@ -43,33 +43,30 @@ def GetProb(C):
         # Add to sum for that class
         Cmi = Cm.index(ci)
         pm[Cmi] += 1
-    return Cm, np.asarray(pm)/len(C)
+    return np.asarray(pm)/len(C), Cm
 
 def NodeImpurity(pm, imptype):
-    # Calculate impurity of node 
-    e = 0.0
+    # Calculate impurity of node
+    # gini and misclass are dichotomous
     if imptype == 'entropy':
+        e = 0.0
         for pi in pm:
             e += -pi*np.log2(pi)
     elif imptype == 'gini':
-        for pi in pm:
-            e = 0.0
+        e = 2*pm[0]*(1 - pm[0])
     elif imptype == 'misclassification error':
-        for pi in pm:
-            e = 0.0
+        e = 1.0 - np.max(pm)
     return e
 
-def SplitImpurity(C, n):
+def SplitImpurity(C, n, imptype):
     # Get the combined entropy of all resulting
     # branches after splitting a node
     e = 0.0
     for j in n:
-        ej = 0.0
         Cj = [C[i] for i in j] # gather classes belonging to j
-        [Cmj, pmj] = GetProb(Cj) # get priors
-        for pmji in pmj:
-            ej += -pmji*np.log2(pmji)
-        e += len(j)*ej/len(C) 
+        pmj = GetPrior(Cj)[0] # get priors
+        ej = NodeImpurity(pmj, imptype) # impurity of branch j
+        e += len(j)*ej/len(C) # impurity of split
     return e
 
 def SplitIndex(X):
@@ -84,7 +81,7 @@ def SplitIndex(X):
         n[nidx].append(t)
     return n # returns array of index arrays for each group
 
-def SplitAttribute(X, dtype):
+def SplitAttribute(X, imptype, dtype):
     # Best split determined at minimum impurity
     # for any split at anny attribute
     MinEnt = float('inf')
@@ -92,7 +89,7 @@ def SplitAttribute(X, dtype):
     for i in range(D)[:-1]: # for all attributes
         if dtype == 'discrete':
             n = SplitIndex(X[:,i])
-            e = SplitImpurity(X[:,-1], n)
+            e = SplitImpurity(X[:,-1], n, imptype)
             if e < MinEnt: # minimize impurity
                 MinEnt = e
                 besti  = i
@@ -101,7 +98,7 @@ def SplitAttribute(X, dtype):
             sort = list(X[:,i].argsort()) # sort indices by increasing X
             for t in range(N)[1:]:
                 n = [ sort[0:t] , sort[t:N] ] # split indices
-                e = SplitImpurity(X[:,-1], n)
+                e = SplitImpurity(X[:,-1], n, imptype)
                 if e < MinEnt:
                     MinEnt = e
                     besti  = i
@@ -155,14 +152,14 @@ def GenerateTree(X, T, imptype, entmax, level, depth, depthmax, dtype):
     level = level + 1 # add a level to the tree
     if level > depth: # keep highest level as depth
         depth = level
-    [Cm, pm] = GetProb(X[:,-1]) # get priors for instances in class
+    [pm, Cm] = GetPrior(X[:,-1]) # get priors for instances in class
     # If we meet an impurity threshold or reach user defined max depth, add leaf
     if NodeImpurity(pm, imptype) < entmax or depth == depthmax:
         T = AddTerminal(T, Cm[ list(pm).index(np.max(pm)) ])
         return [depth, T]
     # Otherwise define position as node and keep adding branches
     else:
-        [i, n] = SplitAttribute(X, dtype) # minimum entropy split
+        [i, n] = SplitAttribute(X, imptype, dtype) # minimum entropy split
         T = AddNode(T, i, dtype) # save index of split in node definition
         for j in n: # for all groups in split
             [val, tooth] = GetValue(X, i, j, n, dtype) # get comparison value and branch indicator

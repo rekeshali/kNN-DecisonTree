@@ -37,11 +37,11 @@ depthmax = 40
 dtypes   = [ 'discrete', 'numeric' ]
 dtype    = dtypes[0]
 imptypes = [ 'entropy', 'gini', 'misclassification error' ]
-imptype  = imptypes[0]
+imptype  = imptypes[1]
 TF       = np.zeros(( 4 ))
 M        = np.zeros(( 5 ))
 X        = buildX(db, key[1:])
-iters = 1
+iters = 100
 for i in range(iters):
     [Xtrain, Xtest] = randsplit(X)
     Ctest = Xtest[:,-1]
