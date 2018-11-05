@@ -2,7 +2,7 @@
 import numpy as np
 from explore import dbraw as db, key
 from prepare import buildX, randsplit
-from implement import kNN, GenerateTree, TreeClassify, perform, metrics
+from implement import kNN, GenerateTree, TreeClassify, PCA, perform, metrics
 from output import kNNout, TreeOut
 #############################################################################
 ############# kNN ###########################################################
@@ -35,12 +35,15 @@ from output import kNNout, TreeOut
 entmax   = 0.1
 depthmax = 40
 dtypes   = [ 'discrete', 'numeric' ]
-dtype    = dtypes[0]
+dtype    = dtypes[1]
 imptypes = [ 'entropy', 'gini', 'misclassification error' ]
 imptype  = imptypes[1]
 TF       = np.zeros(( 4 ))
 M        = np.zeros(( 5 ))
 X        = buildX(db, key[1:])
+Xk = PCA(X[:,:-1], 'kmin', 0.9)
+Xk = np.hstack((Xk,X[:,-1].reshape(X.shape[0],1)))
+X = Xk
 iters = 100
 for i in range(iters):
     [Xtrain, Xtest] = randsplit(X)

@@ -222,5 +222,43 @@ def metrics(TF):
     F1S = 2*PPV*TPR/(PPV + TPR)
     return ACC, TPR, PPV, TNR, F1S
 #######################################################################################
+############### PCA ###################################################################
 #######################################################################################
+def PCA(X, k, pvar):
+    from scipy import linalg as la
+    [U,S,V] = la.svd(X)   # decompose
+    kmin = get_k(S, pvar) # min k to get min percent variance
+    if k == 'kmin':
+        k = kmin   # use min k
+    Uk  = U[:,0:k] # recompose reduced set
+    Sk  = S[ 0:k ]
+    Vk  = V[0:k,:]
+    Sig = diag(Sk)
+    Xk  = Uk*Sig*Vk
+    return np.asarray(Xk)
+
+def get_k(S, pvar): # k that satisfies percent var
+    PV = percent_var(S)
+    for k, var in enumerate(PV):
+        if var >= pvar:
+            break
+    return k + 1
+
+def percent_var(S): # compute pvar array
+    S    = S**2
+    SumS = np.sum(S)
+    PV   = [S[0]]
+    for val in S[1:]:
+        PV.append(PV[-1] + val)
+    PV = np.asarray(PV)/SumS
+    return PV
+
+def diag(S): # digaonalize array, Sig = S*I
+    rank = len(S)
+    Sig = [[0 for x in range(rank)] for y in range(rank)]
+    for i in range(rank):
+        Sig[i][i] = S[i]
+    return np.asmatrix(Sig)
+#######################################################################################
+############### END ###################################################################
 #######################################################################################
