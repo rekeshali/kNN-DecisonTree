@@ -32,28 +32,42 @@ from output import kNNout, TreeOut
 #############################################################################
 ############## Decision Tree ################################################
 #############################################################################
-entmax   = 0.1
-depthmax = 40
+entmaxs  = [0.1, 0.2, 0.3, 0.4]
+entmax   = entmaxs[0]
+depthmaxs= [2,3,4,5,7,10]
+depthmax = depthmaxs[0]
 dtypes   = [ 'discrete', 'numeric' ]
-dtype    = dtypes[1]
+dtype    = dtypes[0]
 imptypes = [ 'entropy', 'gini', 'misclassification error' ]
 imptype  = imptypes[1]
-TF       = np.zeros(( 4 ))
-M        = np.zeros(( 5 ))
+# TF       = np.zeros(( ] ))
+# M        = np.zeros(( 5 ))
 X        = buildX(db, key[1:])
-Xk = PCA(X[:,:-1], 'kmin', 0.9)
-Xk = np.hstack((Xk,X[:,-1].reshape(X.shape[0],1)))
-X = Xk
+# Xk = PCA(X[:,:-1], 'kmin', 0.9)
+# Xk = np.hstack((Xk,X[:,-1].reshape(X.shape[0],1)))
+# X = Xk
+depth = np.zeros( (len(depthmaxs), len(dtypes), len(imptypes), 2) )
+depth[:,:,:,1] = float('inf')
+TF    = np.zeros( (len(depthmaxs), len(dtypes), len(imptypes), 4) )
+M     = np.zeros( (len(depthmaxs), len(dtypes), len(imptypes), 5) )
 iters = 100
-for i in range(iters):
-    [Xtrain, Xtest] = randsplit(X)
-    Ctest = Xtest[:,-1]
-    Ctree = []
-    [depth, T] = GenerateTree(Xtrain, {}, imptype, entmax, 0, 0, depthmax, dtype)
-    for row in Xtest:
-        Ctree.append(TreeClassify(row, T, dtype))
-    TF += perform(np.asarray(Ctree), Ctest)
-M  = metrics(TF)
+for ei, depthmax in enumerate(depthmaxs):
+    for di, dtype in enumerate(dtypes):
+        for ii, imptype in enumerate(imptypes):
+            for i in range(iters):
+                [Xtrain, Xtest] = randsplit(X)
+                Ctest = Xtest[:,-1]
+                Ctree = []
+                [depthtemp, T] = GenerateTree(Xtrain, {}, imptype, entmax, 0, 0, depthmax, dtype)
+                if depthtemp > depth[ei,di,ii,0]:
+                    depth[ei,di,ii,0] = depthtemp
+                if depthtemp < depth[ei,di,ii,1]:
+                    depth[ei,di,ii,1] = depthtemp
+                for row in Xtest:
+                    Ctree.append(TreeClassify(row, T, dtype))
+                TF[ei, di, ii, :] += perform(np.asarray(Ctree), Ctest)
+            M[ei, di, ii, :]  = metrics(TF[ei, di, ii, :])
+TreeOut(depthmaxs, dtypes, imptypes, iters, TF, M, depth)
 #############################################################################
 ############### END #########################################################
 #############################################################################
